@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nila & Milo - Animation 3D</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            font-family: sans-serif;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+        }
+        button {
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #28a745;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        button:disabled {
+            background-color: #6c757d;
+        }
+    </style>
+    <!-- Chargement de Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="ui">
+        <button id="recordBtn">🎥 Enregistrer l'animation (5 sec)</button>
+    </div>
+
+    <script>
+        // 1. Scène, Caméra et Rendu
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1e1e24);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 3, 7);
+        camera.lookAt(0, 1, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Éclairage
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 7);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // 3. Décor (Sol)
+        const floorGeo = new THREE.PlaneGeometry(20, 20);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x333344 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // 4. Personnages (Nila = Sphère violette / Milo = Cylindre orange)
+        const nilaGeo = new THREE.SphereGeometry(0.7, 32, 32);
+        const nilaMat = new THREE.MeshStandardMaterial({ color: 0x8a2be2 });
+        const nila = new THREE.Mesh(nilaGeo, nilaMat);
+        nila.position.set(-1.5, 0.7, 0);
+        nila.castShadow = true;
+        scene.add(nila);
+
+        const miloGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.4, 32);
+        const miloMat = new THREE.MeshStandardMaterial({ color: 0xff7f50 });
+        const milo = new THREE.Mesh(miloGeo, miloMat);
+        milo.position.set(1.5, 0.7, 0);
+        milo.castShadow = true;
+        scene.add(milo);
+
+        // 5. Boucle d'animation
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // Animation Nila (rebond)
+            nila.position.y = 0.7 + Math.abs(Math.sin(time * 3)) * 0.5;
+
+            // Animation Milo (rotation)
+            milo.rotation.y = time * 2;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 6. Gestion du redimensionnement d'écran
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 7. Enregistrement Vidéo avec MediaRecorder API
+        const recordBtn = document.getElementById('recordBtn');
+        recordBtn.addEventListener('click', () => {
+            recordBtn.disabled = true;
+            recordBtn.innerText = "⏳ Enregistrement en cours...";
+
+            const stream = renderer.domElement.captureStream(30); // 30 FPS
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            const chunks = [];
+
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'nila_milo_animation.webm';
+                a.click();
+
+                recordBtn.disabled = false;
+                recordBtn.innerText = "🎥 Enregistrer l'animation (5 sec)";
+            };
+
+            recorder.start();
+            setTimeout(() => recorder.stop(), 5000); // Enregistre pendant 5 secondes
+        });
+    </script>
+</body>
+</html>
