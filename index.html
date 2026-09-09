@@ -5,34 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nila & Milo - Animation 3D</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #1a1a1a;
-            font-family: sans-serif;
-        }
-        #ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 10;
-        }
+        body { margin: 0; overflow: hidden; background-color: #111; font-family: sans-serif; }
+        #ui { position: absolute; top: 20px; left: 20px; z-index: 10; }
         button {
-            padding: 12px 20px;
-            font-size: 16px;
-            font-weight: bold;
-            color: #fff;
-            background-color: #28a745;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            padding: 12px 20px; font-size: 16px; font-weight: bold; color: #fff;
+            background-color: #28a745; border: none; border-radius: 8px; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
-        button:disabled {
-            background-color: #6c757d;
-        }
+        button:disabled { background-color: #6c757d; }
     </style>
-    <!-- Chargement de Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
@@ -42,82 +23,173 @@
     </div>
 
     <script>
-        // 1. Scène, Caméra et Rendu
+        // --- 1. Scène, Caméra et Rendu ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1e1e24);
+        scene.background = new THREE.Color(0x1a1a24);
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 3, 7);
-        camera.lookAt(0, 1, 0);
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2.5, 6);
+        camera.lookAt(0, 1.2, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        // 2. Éclairage
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // --- 2. Éclairage Studio ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(5, 10, 7);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        mainLight.position.set(5, 8, 5);
+        mainLight.castShadow = true;
+        mainLight.shadow.mapSize.width = 1024;
+        mainLight.shadow.mapSize.height = 1024;
+        scene.add(mainLight);
 
-        // 3. Décor (Sol)
-        const floorGeo = new THREE.PlaneGeometry(20, 20);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x333344 });
+        const fillLight = new THREE.DirectionalLight(0x88bbff, 0.5);
+        fillLight.position.set(-5, 3, -2);
+        scene.add(fillLight);
+
+        // --- 3. Décoration Sol / Socle ---
+        const floorGeo = new THREE.CylinderGeometry(4, 4.2, 0.4, 64);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x2d2d3a, roughness: 0.4, metalness: 0.1 });
         const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -0.2;
         floor.receiveShadow = true;
         scene.add(floor);
 
-        // 4. Personnages (Nila = Sphère violette / Milo = Cylindre orange)
-        const nilaGeo = new THREE.SphereGeometry(0.7, 32, 32);
-        const nilaMat = new THREE.MeshStandardMaterial({ color: 0x8a2be2 });
-        const nila = new THREE.Mesh(nilaGeo, nilaMat);
-        nila.position.set(-1.5, 0.7, 0);
-        nila.castShadow = true;
-        scene.add(nila);
+        // Matériaux des yeux
+        const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1 });
+        const eyeIrisMat = new THREE.MeshStandardMaterial({ color: 0x223344, roughness: 0.1 });
 
-        const miloGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.4, 32);
-        const miloMat = new THREE.MeshStandardMaterial({ color: 0xff7f50 });
-        const milo = new THREE.Mesh(miloGeo, miloMat);
-        milo.position.set(1.5, 0.7, 0);
-        milo.castShadow = true;
-        scene.add(milo);
+        // --- 4. Personnage : NILA (Goutte/Poire Violette) ---
+        const nilaGroup = new THREE.Group();
+        
+        // Corps de Nila
+        const nilaGeo = new THREE.SphereGeometry(0.8, 32, 32);
+        nilaGeo.scale(1, 1.3, 0.9); // Étirement forme poire
+        const nilaMat = new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.2, metalness: 0.1 });
+        const nilaBody = new THREE.Mesh(nilaGeo, nilaMat);
+        nilaBody.castShadow = true;
+        nilaGroup.add(nilaBody);
 
-        // 5. Boucle d'animation
-        let clock = new THREE.Clock();
+        // Antenne/Mèche
+        const stemGeo = new THREE.TorusGeometry(0.2, 0.05, 16, 32, Math.PI);
+        const stem = new THREE.Mesh(stemGeo, nilaMat);
+        stem.position.set(0, 1.1, 0);
+        stem.rotation.z = -Math.PI / 4;
+        nilaGroup.add(stem);
+
+        // Yeux Nila
+        [-0.28, 0.28].forEach(x => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), eyeWhiteMat);
+            eye.position.set(x, 0.3, 0.65);
+            eye.scale.set(1, 1.2, 0.5);
+            
+            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), eyeIrisMat);
+            pupil.position.set(0, 0, 0.12);
+            eye.add(pupil);
+            
+            nilaGroup.add(eye);
+        });
+
+        // Bras et Jambes Nila
+        [-0.7, 0.7].forEach(x => {
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5), nilaMat);
+            arm.position.set(x * 1.1, 0, 0);
+            arm.rotation.z = -x * 0.5;
+            nilaGroup.add(arm);
+
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.4), nilaMat);
+            leg.position.set(x * 0.4, -0.9, 0);
+            nilaGroup.add(leg);
+        });
+
+        nilaGroup.position.set(-1.3, 1.1, 0);
+        scene.add(nilaGroup);
+
+        // --- 5. Personnage : MILO (Pilule Orange) ---
+        const miloGroup = new THREE.Group();
+
+        // Corps de Milo
+        const miloGeo = new THREE.CylinderGeometry(0.65, 0.65, 1.1, 32);
+        const miloMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.2, metalness: 0.1 });
+        const miloBody = new THREE.Mesh(miloGeo, miloMat);
+        miloBody.castShadow = true;
+        miloGroup.add(miloBody);
+
+        // Tête et Bas arrondis
+        const capGeo = new THREE.SphereGeometry(0.65, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+        const topCap = new THREE.Mesh(capGeo, miloMat);
+        topCap.position.y = 0.55;
+        miloGroup.add(topCap);
+
+        const bottomCap = new THREE.Mesh(capGeo, miloMat);
+        bottomCap.position.y = -0.55;
+        bottomCap.rotation.x = Math.PI;
+        miloGroup.add(bottomCap);
+
+        // Yeux Milo
+        [-0.25, 0.25].forEach(x => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), eyeWhiteMat);
+            eye.position.set(x, 0.35, 0.55);
+            eye.scale.set(1, 1, 0.4);
+
+            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16), eyeIrisMat);
+            pupil.position.set(0, 0, 0.11);
+            eye.add(pupil);
+
+            miloGroup.add(eye);
+        });
+
+        // Bras et Jambes Milo
+        [-0.6, 0.6].forEach(x => {
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5), miloMat);
+            arm.position.set(x * 1.1, -0.1, 0);
+            arm.rotation.z = -x * 0.3;
+            miloGroup.add(arm);
+
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.35), miloMat);
+            leg.position.set(x * 0.4, -1.0, 0);
+            miloGroup.add(leg);
+        });
+
+        miloGroup.position.set(1.3, 1.1, 0);
+        scene.add(miloGroup);
+
+        // --- 6. Boucle d'Animation ---
+        const clock = new THREE.Clock();
 
         function animate() {
             requestAnimationFrame(animate);
-            const time = clock.getElapsedTime();
+            const t = clock.getElapsedTime();
 
-            // Animation Nila (rebond)
-            nila.position.y = 0.7 + Math.abs(Math.sin(time * 3)) * 0.5;
+            // Respiration / Rebond doux
+            nilaGroup.position.y = 1.1 + Math.sin(t * 3) * 0.15;
+            nilaGroup.rotation.y = Math.sin(t * 1.5) * 0.2;
 
-            // Animation Milo (rotation)
-            milo.rotation.y = time * 2;
+            miloGroup.position.y = 1.1 + Math.cos(t * 3) * 0.12;
+            miloGroup.rotation.y = -Math.sin(t * 1.5) * 0.2;
 
             renderer.render(scene, camera);
         }
         animate();
 
-        // 6. Gestion du redimensionnement d'écran
+        // --- 7. Redimensionnement & Enregistrement ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // 7. Enregistrement Vidéo avec MediaRecorder API
         const recordBtn = document.getElementById('recordBtn');
         recordBtn.addEventListener('click', () => {
             recordBtn.disabled = true;
-            recordBtn.innerText = "⏳ Enregistrement en cours...";
+            recordBtn.innerText = "⏳ Enregistrement...";
 
-            const stream = renderer.domElement.captureStream(30); // 30 FPS
+            const stream = renderer.domElement.captureStream(30);
             const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
             const chunks = [];
 
@@ -127,7 +199,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'nila_milo_animation.webm';
+                a.download = 'nila_milo_3d.webm';
                 a.click();
 
                 recordBtn.disabled = false;
@@ -135,7 +207,7 @@
             };
 
             recorder.start();
-            setTimeout(() => recorder.stop(), 5000); // Enregistre pendant 5 secondes
+            setTimeout(() => recorder.stop(), 5000);
         });
     </script>
 </body>
